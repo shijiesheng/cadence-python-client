@@ -6,7 +6,6 @@ from typing import Any, Callable, Union, cast
 from google.protobuf.duration import to_timedelta
 from google.protobuf.timestamp import to_datetime
 
-from cadence._internal.activity._cancellation import _ActivityCancellation
 from cadence._internal.activity._context import _Context, _SyncContext
 from cadence._internal.activity._definition import BaseDefinition, ExecutionStrategy
 from cadence._internal.activity._heartbeat import _HeartbeatSender
@@ -73,20 +72,16 @@ class ActivityExecutor:
             raise KeyError(f"Activity type not found: {activity_type}") from None
 
         info = self._create_info(task)
-        cancellation = _ActivityCancellation()
         heartbeat_sender = _HeartbeatSender(
             self._client.worker_stub,
             self._data_converter,
             task.task_token,
             self._identity,
             task.heartbeat_details,
-            cancellation,
         )
 
         if activity_def.strategy == ExecutionStrategy.ASYNC:
-            return _Context(
-                self._client, info, activity_def, heartbeat_sender, cancellation
-            )
+            return _Context(self._client, info, activity_def, heartbeat_sender)
         else:
             return _SyncContext(
                 self._client,
@@ -94,7 +89,6 @@ class ActivityExecutor:
                 activity_def,
                 self._thread_pool,
                 heartbeat_sender,
-                cancellation,
             )
 
     async def _report_failure(
