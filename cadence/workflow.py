@@ -19,6 +19,7 @@ from typing import (
     Unpack,
     Generic,
     NoReturn,
+    Mapping,
 )
 import inspect
 
@@ -230,6 +231,16 @@ def get_version(
 
     """
     return WorkflowContext.get().get_version(change_id, min_supported, max_supported)
+
+
+def upsert_search_attributes(attributes: Mapping[str, Any]) -> None:
+    """Add or update indexed search attributes for this workflow execution.
+
+    Keys and value types must be registered on the Cadence server (see
+    GetSearchAttributes). Values are merged into the existing map; there is
+    no API to remove a key. Values must be deterministic across replay.
+    """
+    WorkflowContext.get().upsert_search_attributes(attributes)
 
 
 def is_cancel_requested() -> bool:
@@ -590,6 +601,7 @@ class WorkflowInfo:
     workflow_task_list: str
     data_converter: DataConverter
     memo: dict[str, Any] | None = None
+    search_attributes: dict[str, Any] | None = None
 
 
 class WorkflowContext(ABC):
@@ -675,6 +687,9 @@ class WorkflowContext(ABC):
         min_supported: int,
         max_supported: int,
     ) -> int: ...
+
+    @abstractmethod
+    def upsert_search_attributes(self, attributes: Mapping[str, Any]) -> None: ...
 
     @abstractmethod
     def is_cancel_requested(self) -> bool: ...

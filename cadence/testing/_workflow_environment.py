@@ -47,6 +47,7 @@ from asyncio import Future, get_running_loop
 from collections.abc import Iterator, Mapping
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from typing import (
     Any,
@@ -302,6 +303,13 @@ class _InMemoryWorkflowContext(WorkflowContext):
             max_supported,
         )
         return version
+
+    def upsert_search_attributes(self, attributes: Mapping[str, Any]) -> None:
+        if not attributes:
+            raise ValueError("search attributes must not be empty")
+        merged = dict(self._info.search_attributes or {})
+        merged.update(attributes)
+        self._info = replace(self._info, search_attributes=merged)
 
     async def signal_child_workflow(
         self,
