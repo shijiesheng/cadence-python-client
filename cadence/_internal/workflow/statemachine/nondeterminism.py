@@ -3,6 +3,7 @@ from functools import singledispatch
 from typing import Any, OrderedDict, Dict, List, Never
 
 from cadence._internal.workflow.deterministic_event_loop import FatalDecisionError
+from cadence._internal.workflow.search_attributes import decode_indexed_field
 from cadence._internal.workflow.statemachine.cancellation import (
     is_immediate_cancel,
     from_marker,
@@ -112,15 +113,16 @@ class DeterminismTracker:
 
         self._add_expectations(expected.decision_id, [expected])
 
-    def _sequence_upsert(
-        self, expected: Expectation, *, actual: bool
-    ) -> Expectation:
+    def _sequence_upsert(self, expected: Expectation, *, actual: bool) -> Expectation:
         """Assign a stable per-run ID to upsert decisions.
 
         History events do not carry a client ID, so expected history and
         workflow-generated decisions are numbered on independent counters.
         """
-        if expected.decision_id.decision_type is not DecisionType.UPSERT_SEARCH_ATTRIBUTES:
+        if (
+            expected.decision_id.decision_type
+            is not DecisionType.UPSERT_SEARCH_ATTRIBUTES
+        ):
             return expected
         if actual:
             upsert_id = str(self._upsert_actual_counter)
@@ -222,6 +224,18 @@ class DeterminismTracker:
         if self._expectations:
             self._fail(self._next_expectation(), None)
         self._expectations.clear()
+
+    def fail_unmatched_upsert(self, event_id: int) -> Never:
+        """History recorded an upsert that workflow code did not produce."""
+        expected = self._next_expectation() if self._expectations else None
+        self._fail(
+            expected,
+            Expectation(
+                DecisionId(DecisionType.UPSERT_SEARCH_ATTRIBUTES, ""),
+                {},
+                event_id,
+            ),
+        )
 
 
 def record_immediate_cancel(attrs: Any) -> decision.Decision:
@@ -425,10 +439,8 @@ def _search_attributes_identity(
 ) -> dict[str, Any]:
     return {
         "indexed_fields": tuple(
-            sorted(
-                (key, value.data)
-                for key, value in attrs.search_attributes.indexed_fields.items()
-            )
+            (key, decode_indexed_field(value))
+            for key, value in sorted(attrs.search_attributes.indexed_fields.items())
         )
     }
 

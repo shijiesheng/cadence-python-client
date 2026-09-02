@@ -425,9 +425,7 @@ class DecisionManager:
                 and machine.state is DecisionState.REQUESTED
             ):
                 return machine
-        raise KeyError(
-            f"Event {event_id} references unknown upsert search attributes state machine"
-        )
+        self._determinism_tracker.fail_unmatched_upsert(event_id)
 
     def _state_machine_for_marker_event(
         self,

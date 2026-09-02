@@ -884,9 +884,7 @@ def _upsert_attrs(
     return attrs
 
 
-def _upsert_recorded(
-    event_id: int, fields: dict[str, bytes]
-) -> history.HistoryEvent:
+def _upsert_recorded(event_id: int, fields: dict[str, bytes]) -> history.HistoryEvent:
     event = history.HistoryEvent(event_id=event_id)
     for key, value in fields.items():
         event.upsert_workflow_search_attributes_event_attributes.search_attributes.indexed_fields[
@@ -928,10 +926,7 @@ async def test_upsert_search_attributes_multiple_match_in_order():
 
     pending = decisions.collect_pending_decisions()
     assert len(pending) == 1
-    assert (
-        pending[0].upsert_workflow_search_attributes_decision_attributes
-        == second
-    )
+    assert pending[0].upsert_workflow_search_attributes_decision_attributes == second
 
     decisions.handle_history_event(
         _upsert_recorded(2, {"CustomKeywordField": b'"seattle"'})
@@ -945,6 +940,16 @@ async def test_replayed_upsert_matches_history():
 
     with decisions.track_nondeterminism(True, [recorded]):
         decisions.upsert_search_attributes(_upsert_attrs({"CustomIntField": b"1"}))
+
+
+async def test_replayed_upsert_matches_equivalent_json_encoding():
+    decisions = DecisionManager(asyncio.get_event_loop())
+    recorded = _upsert_recorded(1, {"CustomKeywordField": b' { "city" : "seattle" } '})
+
+    with decisions.track_nondeterminism(True, [recorded]):
+        decisions.upsert_search_attributes(
+            _upsert_attrs({"CustomKeywordField": b'{"city":"seattle"}'})
+        )
 
 
 async def test_replayed_upsert_value_mismatch_is_nondeterministic():
@@ -963,3 +968,10 @@ async def test_replayed_upsert_missing_from_workflow_is_nondeterministic():
     with pytest.raises(NonDeterminismError):
         with decisions.track_nondeterminism(True, [recorded]):
             pass
+
+
+async def test_upsert_history_without_requested_machine_is_nondeterministic():
+    decisions = DecisionManager(asyncio.get_event_loop())
+
+    with pytest.raises(NonDeterminismError):
+        decisions.handle_history_event(_upsert_recorded(1, {"CustomIntField": b"1"}))

@@ -63,6 +63,7 @@ from typing import (
 
 from cadence._internal.activity._definition import BaseDefinition
 from cadence._internal.workflow.deterministic_event_loop import DeterministicEventLoop
+from cadence._internal.workflow.search_attributes import search_attributes_to_proto
 from cadence._internal.workflow.versioning import (
     validate_resolved_version,
     validate_version_arguments,
@@ -305,7 +306,8 @@ class _InMemoryWorkflowContext(WorkflowContext):
         return version
 
     def upsert_search_attributes(self, attributes: Mapping[str, Any]) -> None:
-        if not attributes:
+        proto = search_attributes_to_proto(self.data_converter(), attributes)
+        if proto is None:
             raise ValueError("search attributes must not be empty")
         merged = dict(self._info.search_attributes or {})
         merged.update(attributes)

@@ -435,7 +435,6 @@ class TestWorkflowEngine:
             )
         )
 
-
     def test_upsert_search_attributes_emits_decision(self):
         workflow_engine = create_workflow_engine(
             WorkflowDefinition.wrap(

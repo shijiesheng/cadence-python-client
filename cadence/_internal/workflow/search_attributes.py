@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, Mapping
 
 from cadence.api.v1 import common_pb2
@@ -34,3 +35,17 @@ def search_attributes_from_proto(
         key: data_converter.from_data(payload, [None])[0]
         for key, payload in attributes.indexed_fields.items()
     }
+
+
+def decode_indexed_field(payload: common_pb2.Payload) -> Any:
+    """Decode an indexed-field payload for determinism comparison.
+
+    Cadence search attributes are JSON. Comparing decoded values rather than
+    raw bytes ignores whitespace and object-key order if history ever stores a
+    normalized encoding of the same value. Non-JSON payloads fall back to the
+    original bytes so a real mismatch is still detected.
+    """
+    try:
+        return json.loads(payload.data.decode())
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+        return payload.data
