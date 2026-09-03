@@ -61,7 +61,9 @@ def test_upsert_search_attributes_is_noop_on_replay():
     ctx, dm = _make_ctx()
     ctx.set_replay_mode(True)
 
-    ctx.upsert_search_attributes({"CustomIntField": 1, "CustomKeywordField": ["a", "b"]})
+    ctx.upsert_search_attributes(
+        {"CustomIntField": 1, "CustomKeywordField": ["a", "b"]}
+    )
 
     dm.upsert_search_attributes.assert_not_called()
     assert ctx.info().search_attributes == {

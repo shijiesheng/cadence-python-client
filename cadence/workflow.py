@@ -606,9 +606,9 @@ class WorkflowInfo:
     workflow_task_list: str
     data_converter: DataConverter
     memo: dict[str, Any] | None = None
-    search_attributes: dict[str, SearchAttributeType | list[SearchAttributeType]] | None = (
-        None
-    )
+    search_attributes: (
+        dict[str, SearchAttributeType | list[SearchAttributeType]] | None
+    ) = None
 
 
 class WorkflowContext(ABC):

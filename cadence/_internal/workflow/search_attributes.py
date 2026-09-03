@@ -54,7 +54,9 @@ def decode_indexed_field(payload: common_pb2.Payload) -> Any:
         return payload.data
 
 
-def _encode_indexed_value(value: SearchAttributeType | list[SearchAttributeType]) -> bytes:
+def _encode_indexed_value(
+    value: SearchAttributeType | list[SearchAttributeType],
+) -> bytes:
     return json.dumps(
         value,
         separators=(",", ":"),
