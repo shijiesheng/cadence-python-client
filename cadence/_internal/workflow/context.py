@@ -350,7 +350,7 @@ class Context(WorkflowContext):
         )
 
     def upsert_search_attributes(self, attributes: Mapping[str, Any]) -> None:
-        proto = search_attributes_to_proto(self.data_converter(), attributes)
+        proto = search_attributes_to_proto(attributes)
         if proto is None:
             raise ValueError("search attributes must not be empty")
         self._decision_manager.upsert_search_attributes(

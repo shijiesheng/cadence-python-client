@@ -23,14 +23,13 @@ def _make_ctx() -> tuple[Context, MagicMock]:
 
 def test_upsert_search_attributes_emits_decision():
     ctx, dm = _make_ctx()
-    dc = DefaultDataConverter()
 
     ctx.upsert_search_attributes({"CustomIntField": 1, "CustomBoolField": True})
 
     dm.upsert_search_attributes.assert_called_once()
     attrs = dm.upsert_search_attributes.call_args[0][0]
     expected = search_attributes_to_proto(
-        dc, {"CustomIntField": 1, "CustomBoolField": True}
+        {"CustomIntField": 1, "CustomBoolField": True}
     )
     assert attrs.search_attributes == expected
 

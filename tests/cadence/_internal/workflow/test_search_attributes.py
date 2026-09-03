@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import pytest
 
@@ -8,54 +8,58 @@ from cadence._internal.workflow.search_attributes import (
     search_attributes_to_proto,
 )
 from cadence.api.v1.common_pb2 import Payload
-from cadence.data_converter import DefaultDataConverter
 
 
 def test_search_attributes_to_proto_none() -> None:
-    dc = DefaultDataConverter()
-    assert search_attributes_to_proto(dc, None) is None
+    assert search_attributes_to_proto(None) is None
 
 
 def test_search_attributes_to_proto_empty_dict() -> None:
-    dc = DefaultDataConverter()
-    assert search_attributes_to_proto(dc, {}) is None
+    assert search_attributes_to_proto({}) is None
 
 
-def test_search_attributes_to_proto_single_key_matches_to_data() -> None:
-    dc = DefaultDataConverter()
-    proto = search_attributes_to_proto(dc, {"k": "v"})
+def test_search_attributes_to_proto_json_encodes_each_value() -> None:
+    proto = search_attributes_to_proto({"k": "v"})
     assert proto is not None
     assert list(proto.indexed_fields.keys()) == ["k"]
-    assert proto.indexed_fields["k"] == dc.to_data(["v"])
+    assert proto.indexed_fields["k"].data == b'"v"'
 
 
-def test_search_attributes_to_proto_multiple_keys() -> None:
-    dc = DefaultDataConverter()
-    proto = search_attributes_to_proto(dc, {"a": 1, "b": "two", "c": True})
+def test_search_attributes_to_proto_scalar_types() -> None:
+    proto = search_attributes_to_proto({"a": 1, "b": "two", "c": True, "d": 1.5})
     assert proto is not None
-    assert proto.indexed_fields["a"] == dc.to_data([1])
-    assert proto.indexed_fields["b"] == dc.to_data(["two"])
-    assert proto.indexed_fields["c"] == dc.to_data([True])
+    assert proto.indexed_fields["a"].data == b"1"
+    assert proto.indexed_fields["b"].data == b'"two"'
+    assert proto.indexed_fields["c"].data == b"true"
+    assert proto.indexed_fields["d"].data == b"1.5"
 
 
-@dataclass
-class _Sample:
-    x: int
-    y: str
+def test_search_attributes_to_proto_list_values() -> None:
+    proto = search_attributes_to_proto({"keywords": ["a", "b"]})
+    assert proto is not None
+    assert proto.indexed_fields["keywords"].data == b'["a","b"]'
+
+
+def test_search_attributes_to_proto_datetime_rfc3339() -> None:
+    proto = search_attributes_to_proto(
+        {"CustomDatetimeField": datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc)}
+    )
+    assert proto is not None
+    assert proto.indexed_fields["CustomDatetimeField"].data == (
+        b'"2024-01-15T10:30:00Z"'
+    )
 
 
 def test_search_attributes_round_trip() -> None:
-    dc = DefaultDataConverter()
     original = {"CustomIntField": 2, "CustomKeywordField": "seattle"}
-    proto = search_attributes_to_proto(dc, original)
+    proto = search_attributes_to_proto(original)
     assert proto is not None
-    assert search_attributes_from_proto(dc, proto) == original
+    assert search_attributes_from_proto(proto) == original
 
 
 def test_search_attributes_to_proto_encoding_error_propagates() -> None:
-    dc = DefaultDataConverter()
-    with pytest.raises(Exception):
-        search_attributes_to_proto(dc, {"bad": object()})
+    with pytest.raises(TypeError):
+        search_attributes_to_proto({"bad": object()})
 
 
 def test_decode_indexed_field_ignores_json_whitespace() -> None:

@@ -4,6 +4,8 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import timedelta
+import datetime
+import string
 from typing import (
     Awaitable,
     Iterator,
@@ -34,6 +36,7 @@ from cadence.signal import SignalDefinition, SignalDefinitionOptions
 _QUERY_TYPES_QUERY_NAME = "__query_types"
 
 ResultType = TypeVar("ResultType")
+SearchAttributeType = Union[string, int, float, bool, datetime]
 DEFAULT_VERSION = -1
 
 
@@ -689,7 +692,7 @@ class WorkflowContext(ABC):
     ) -> int: ...
 
     @abstractmethod
-    def upsert_search_attributes(self, attributes: Mapping[str, Any]) -> None: ...
+    def upsert_search_attributes(self, attributes: Mapping[str, SearchAttributeType | list[SearchAttributeType]]) -> None: ...
 
     @abstractmethod
     def is_cancel_requested(self) -> bool: ...

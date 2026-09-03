@@ -184,9 +184,7 @@ class DecisionTaskHandler(BaseTaskHandler[PollForDecisionTaskResponse]):
             else None
         )
         search_attributes = (
-            search_attributes_from_proto(
-                self._client.data_converter, started_attrs.search_attributes
-            )
+            search_attributes_from_proto(started_attrs.search_attributes)
             if started_attrs.HasField("search_attributes")
             else None
         )

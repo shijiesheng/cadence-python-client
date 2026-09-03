@@ -465,7 +465,7 @@ class TestWorkflowEngine:
         indexed = decision_result.decisions[
             0
         ].upsert_workflow_search_attributes_decision_attributes.search_attributes.indexed_fields
-        assert indexed["CustomIntField"] == DefaultDataConverter().to_data([1])
+        assert indexed["CustomIntField"].data == b"1"
         assert workflow_engine._context.info().search_attributes == {
             "CustomIntField": 1
         }
@@ -479,7 +479,7 @@ class TestWorkflowEngine:
         )
         upsert_attrs = UpsertWorkflowSearchAttributesEventAttributes()
         upsert_attrs.search_attributes.indexed_fields["CustomIntField"].CopyFrom(
-            DefaultDataConverter().to_data([1])
+            Payload(data=b"1")
         )
         decision_result = workflow_engine.process_decision(
             [

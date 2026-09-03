@@ -306,7 +306,7 @@ class _InMemoryWorkflowContext(WorkflowContext):
         return version
 
     def upsert_search_attributes(self, attributes: Mapping[str, Any]) -> None:
-        proto = search_attributes_to_proto(self.data_converter(), attributes)
+        proto = search_attributes_to_proto(attributes)
         if proto is None:
             raise ValueError("search attributes must not be empty")
         merged = dict(self._info.search_attributes or {})
