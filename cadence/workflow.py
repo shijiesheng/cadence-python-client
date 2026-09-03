@@ -3,9 +3,7 @@ from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
-from datetime import timedelta
-import datetime
-import string
+from datetime import datetime, timedelta
 from typing import (
     Awaitable,
     Iterator,
@@ -36,7 +34,7 @@ from cadence.signal import SignalDefinition, SignalDefinitionOptions
 _QUERY_TYPES_QUERY_NAME = "__query_types"
 
 ResultType = TypeVar("ResultType")
-SearchAttributeType = Union[string, int, float, bool, datetime]
+SearchAttributeType = Union[str, int, float, bool, datetime]
 DEFAULT_VERSION = -1
 
 
