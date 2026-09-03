@@ -23,6 +23,7 @@ def _make_ctx() -> tuple[Context, MagicMock]:
 
 def test_upsert_search_attributes_emits_decision():
     ctx, dm = _make_ctx()
+    ctx.set_replay_mode(False)
 
     ctx.upsert_search_attributes({"CustomIntField": 1, "CustomBoolField": True})
 
@@ -54,3 +55,16 @@ def test_upsert_search_attributes_rejects_empty():
         ctx.upsert_search_attributes({})
 
     dm.upsert_search_attributes.assert_not_called()
+
+
+def test_upsert_search_attributes_is_noop_on_replay():
+    ctx, dm = _make_ctx()
+    ctx.set_replay_mode(True)
+
+    ctx.upsert_search_attributes({"CustomIntField": 1, "CustomKeywordField": ["a", "b"]})
+
+    dm.upsert_search_attributes.assert_not_called()
+    assert ctx.info().search_attributes == {
+        "CustomIntField": 1,
+        "CustomKeywordField": ["a", "b"],
+    }

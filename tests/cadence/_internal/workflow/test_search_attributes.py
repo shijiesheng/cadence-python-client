@@ -40,6 +40,13 @@ def test_search_attributes_to_proto_list_values() -> None:
     assert proto.indexed_fields["keywords"].data == b'["a","b"]'
 
 
+def test_search_attributes_to_proto_list_of_ints() -> None:
+    proto = search_attributes_to_proto({"CustomIntField": [1, 2, 3]})
+    assert proto is not None
+    assert proto.indexed_fields["CustomIntField"].data == b"[1,2,3]"
+    assert search_attributes_from_proto(proto) == {"CustomIntField": [1, 2, 3]}
+
+
 def test_search_attributes_to_proto_datetime_rfc3339() -> None:
     proto = search_attributes_to_proto(
         {"CustomDatetimeField": datetime(2024, 1, 15, 10, 30, tzinfo=timezone.utc)}

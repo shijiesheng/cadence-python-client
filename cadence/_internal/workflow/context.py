@@ -46,6 +46,7 @@ from cadence.workflow import (
     ChildWorkflowFuture,
     ChildWorkflowOptions,
     ResultType,
+    SearchAttributeType,
     WorkflowCancellationInfo,
     WorkflowContext,
     WorkflowInfo,
@@ -349,13 +350,18 @@ class Context(WorkflowContext):
             self.data_converter().from_data(result_payload, [result_type])[0],
         )
 
-    def upsert_search_attributes(self, attributes: Mapping[str, Any]) -> None:
+    def upsert_search_attributes(
+        self, attributes: Mapping[str, SearchAttributeType | list[SearchAttributeType]]
+    ) -> None:
         proto = search_attributes_to_proto(attributes)
         if proto is None:
             raise ValueError("search attributes must not be empty")
-        self._decision_manager.upsert_search_attributes(
-            UpsertWorkflowSearchAttributesDecisionAttributes(search_attributes=proto)
-        )
+        if not self.is_replay_mode():
+            self._decision_manager.upsert_search_attributes(
+                UpsertWorkflowSearchAttributesDecisionAttributes(
+                    search_attributes=proto
+                )
+            )
         merged = dict(self._info.search_attributes or {})
         merged.update(attributes)
         self._info = replace(self._info, search_attributes=merged)

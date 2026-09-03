@@ -8,14 +8,16 @@ Cadence indexes these values with ``encoding/json`` on the server
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
-from typing import Any, Mapping
+from collections.abc import Mapping
+from datetime import datetime, timezone
+from typing import Any
 
 from cadence.api.v1 import common_pb2
+from cadence.workflow import SearchAttributeType
 
 
 def search_attributes_to_proto(
-    attributes: Mapping[str, Any] | None,
+    attributes: Mapping[str, SearchAttributeType | list[SearchAttributeType]] | None,
 ) -> common_pb2.SearchAttributes | None:
     """Serialize ``attributes`` to protobuf, or ``None`` if none were provided."""
     if not attributes:
@@ -43,9 +45,8 @@ def decode_indexed_field(payload: common_pb2.Payload) -> Any:
 
     Server decoding is ``json.Unmarshal`` into the registered value type
     (string, int64, float64, bool, time.Time, or a list of the same). Without
-    the type map we unmarshal into a generic JSON value, which is equivalent
-    for determinism: whitespace and object-key order are ignored. Non-JSON
-    payloads fall back to the original bytes.
+    the type map we unmarshal into a generic JSON value. Non-JSON payloads
+    fall back to the original bytes.
     """
     try:
         return json.loads(payload.data.decode())
@@ -53,7 +54,7 @@ def decode_indexed_field(payload: common_pb2.Payload) -> Any:
         return payload.data
 
 
-def _encode_indexed_value(value: Any) -> bytes:
+def _encode_indexed_value(value: SearchAttributeType | list[SearchAttributeType]) -> bytes:
     return json.dumps(
         value,
         separators=(",", ":"),
@@ -67,6 +68,4 @@ def _json_default(obj: Any) -> Any:
         if obj.tzinfo is None:
             obj = obj.replace(tzinfo=timezone.utc)
         return obj.isoformat().replace("+00:00", "Z")
-    if isinstance(obj, date):
-        return obj.isoformat()
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")

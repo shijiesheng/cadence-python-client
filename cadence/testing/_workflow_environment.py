@@ -87,6 +87,7 @@ from cadence.workflow import (
     ChildWorkflowFuture,
     ChildWorkflowOptions,
     ResultType,
+    SearchAttributeType,
     WorkflowContext,
     WorkflowDefinition,
     WorkflowInfo,
@@ -305,7 +306,9 @@ class _InMemoryWorkflowContext(WorkflowContext):
         )
         return version
 
-    def upsert_search_attributes(self, attributes: Mapping[str, Any]) -> None:
+    def upsert_search_attributes(
+        self, attributes: Mapping[str, SearchAttributeType | list[SearchAttributeType]]
+    ) -> None:
         proto = search_attributes_to_proto(attributes)
         if proto is None:
             raise ValueError("search attributes must not be empty")
