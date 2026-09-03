@@ -266,7 +266,7 @@ def test_in_memory_context_rejects_unserializable_search_attributes():
     context = _InMemoryWorkflowContext(MagicMock(), _info())
 
     with pytest.raises(Exception):
-        context.upsert_search_attributes({"bad": object()})
+        context.upsert_search_attributes({"bad": object()})  # type: ignore[dict-item]
     assert context.info().search_attributes is None
 
 

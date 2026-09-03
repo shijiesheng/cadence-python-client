@@ -8,6 +8,7 @@ from cadence._internal.workflow.search_attributes import (
     search_attributes_to_proto,
 )
 from cadence.api.v1.common_pb2 import Payload
+from cadence.workflow import SearchAttributeType
 
 
 def test_search_attributes_to_proto_none() -> None:
@@ -58,7 +59,10 @@ def test_search_attributes_to_proto_datetime_rfc3339() -> None:
 
 
 def test_search_attributes_round_trip() -> None:
-    original = {"CustomIntField": 2, "CustomKeywordField": "seattle"}
+    original: dict[str, SearchAttributeType | list[SearchAttributeType]] = {
+        "CustomIntField": 2,
+        "CustomKeywordField": "seattle",
+    }
     proto = search_attributes_to_proto(original)
     assert proto is not None
     assert search_attributes_from_proto(proto) == original
@@ -66,7 +70,7 @@ def test_search_attributes_round_trip() -> None:
 
 def test_search_attributes_to_proto_encoding_error_propagates() -> None:
     with pytest.raises(TypeError):
-        search_attributes_to_proto({"bad": object()})
+        search_attributes_to_proto({"bad": object()})  # type: ignore[dict-item]
 
 
 def test_decode_indexed_field_ignores_json_whitespace() -> None:
