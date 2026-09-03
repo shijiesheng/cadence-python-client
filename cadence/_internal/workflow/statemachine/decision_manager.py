@@ -388,7 +388,9 @@ class DecisionManager:
                 if machine is None:
                     return
             elif decision_type is DecisionType.UPSERT_SEARCH_ATTRIBUTES:
-                machine = self._state_machine_for_upsert_event(event.event_id)
+                machine = self._state_machine_for_upsert_event()
+                if machine is None:
+                    return
             else:
                 machine = self._state_machine_for_event(
                     event.event_id, decision_type, action, event_attributes
@@ -417,7 +419,9 @@ class DecisionManager:
             raise KeyError(f"Event {event_id} references unknown state machine {alias}")
         return machine
 
-    def _state_machine_for_upsert_event(self, event_id: int) -> DecisionStateMachine:
+    def _state_machine_for_upsert_event(
+        self,
+    ) -> DecisionStateMachine | None:
         # Upsert history events have no client ID; match the next REQUESTED machine.
         for machine in self.state_machines.values():
             if (
@@ -425,7 +429,7 @@ class DecisionManager:
                 and machine.state is DecisionState.REQUESTED
             ):
                 return machine
-        self._determinism_tracker.fail_unmatched_upsert(event_id)
+        return None
 
     def _state_machine_for_marker_event(
         self,

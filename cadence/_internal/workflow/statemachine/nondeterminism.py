@@ -3,7 +3,6 @@ from functools import singledispatch
 from typing import Any, OrderedDict, Dict, List, Never
 
 from cadence._internal.workflow.deterministic_event_loop import FatalDecisionError
-from cadence._internal.workflow.search_attributes import decode_indexed_field
 from cadence._internal.workflow.statemachine.cancellation import (
     is_immediate_cancel,
     from_marker,
@@ -79,8 +78,6 @@ class DeterminismTracker:
     def __init__(self) -> None:
         self._expectations: OrderedDict[DecisionId, List[Expectation]] = OrderedDict()
         self._failed = False
-        self._upsert_expected_counter = 0
-        self._upsert_actual_counter = 0
 
     def add_expectation(self, event: history.HistoryEvent) -> None:
         # Immediate cancellation is the only case where we have more than one Expectation
@@ -107,34 +104,10 @@ class DeterminismTracker:
         if expected is None:
             return
 
-        expected = self._sequence_upsert(expected, actual=False)
         # Add Event ID just to improve debugging experience
         expected = expected.with_event_id(event.event_id)
 
         self._add_expectations(expected.decision_id, [expected])
-
-    def _sequence_upsert(self, expected: Expectation, *, actual: bool) -> Expectation:
-        """Assign a stable per-run ID to upsert decisions.
-
-        History events do not carry a client ID, so expected history and
-        workflow-generated decisions are numbered on independent counters.
-        """
-        if (
-            expected.decision_id.decision_type
-            is not DecisionType.UPSERT_SEARCH_ATTRIBUTES
-        ):
-            return expected
-        if actual:
-            upsert_id = str(self._upsert_actual_counter)
-            self._upsert_actual_counter += 1
-        else:
-            upsert_id = str(self._upsert_expected_counter)
-            self._upsert_expected_counter += 1
-        return Expectation(
-            DecisionId(DecisionType.UPSERT_SEARCH_ATTRIBUTES, upsert_id),
-            expected.properties,
-            expected.event_id,
-        )
 
     def _add_expectations(
         self, decision_id: DecisionId, to_expect: List[Expectation]
@@ -151,7 +124,7 @@ class DeterminismTracker:
         if props is None:
             return None
 
-        return self._validate_expectation(self._sequence_upsert(props, actual=True))
+        return self._validate_expectation(props)
 
     def validate_cancel(self, decision_id: DecisionId) -> None:
         # Cancellation may happen automatically, ignore it
@@ -224,18 +197,6 @@ class DeterminismTracker:
         if self._expectations:
             self._fail(self._next_expectation(), None)
         self._expectations.clear()
-
-    def fail_unmatched_upsert(self, event_id: int) -> Never:
-        """History recorded an upsert that workflow code did not produce."""
-        expected = self._next_expectation() if self._expectations else None
-        self._fail(
-            expected,
-            Expectation(
-                DecisionId(DecisionType.UPSERT_SEARCH_ATTRIBUTES, ""),
-                {},
-                event_id,
-            ),
-        )
 
 
 def record_immediate_cancel(attrs: Any) -> decision.Decision:
@@ -433,36 +394,20 @@ def _(attrs: history.MarkerRecordedEventAttributes) -> Expectation | None:
     return Expectation(marker_decision_id(attrs.marker_name, context_id), {})
 
 
-def _search_attributes_identity(
-    attrs: history.UpsertWorkflowSearchAttributesEventAttributes
-    | decision.UpsertWorkflowSearchAttributesDecisionAttributes,
-) -> dict[str, Any]:
-    return {
-        "indexed_fields": tuple(
-            (key, decode_indexed_field(value))
-            for key, value in sorted(attrs.search_attributes.indexed_fields.items())
-        )
-    }
+# Upsert search attributes are not part of decision matching. Presence, order,
+# and indexed-field values may change without being treated as nondeterminism.
+@to_expectation.register
+def _(
+    _: decision.UpsertWorkflowSearchAttributesDecisionAttributes,
+) -> None:
+    return None
 
 
 @to_expectation.register
 def _(
-    attrs: decision.UpsertWorkflowSearchAttributesDecisionAttributes,
-) -> Expectation:
-    return Expectation(
-        DecisionId(DecisionType.UPSERT_SEARCH_ATTRIBUTES, ""),
-        _search_attributes_identity(attrs),
-    )
-
-
-@to_expectation.register
-def _(
-    attrs: history.UpsertWorkflowSearchAttributesEventAttributes,
-) -> Expectation:
-    return Expectation(
-        DecisionId(DecisionType.UPSERT_SEARCH_ATTRIBUTES, ""),
-        _search_attributes_identity(attrs),
-    )
+    _: history.UpsertWorkflowSearchAttributesEventAttributes,
+) -> None:
+    return None
 
 
 # Workflow Completion - Enforce complete vs failure. Maybe we should enforce the output data?

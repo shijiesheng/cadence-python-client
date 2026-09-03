@@ -942,36 +942,17 @@ async def test_replayed_upsert_matches_history():
         decisions.upsert_search_attributes(_upsert_attrs({"CustomIntField": b"1"}))
 
 
-async def test_replayed_upsert_matches_equivalent_json_encoding():
+async def test_replayed_upsert_is_not_checked_for_nondeterminism():
     decisions = DecisionManager(asyncio.get_event_loop())
-    recorded = _upsert_recorded(1, {"CustomKeywordField": b' { "city" : "seattle" } '})
+    recorded = _upsert_recorded(1, {"CustomIntField": b"1"})
 
     with decisions.track_nondeterminism(True, [recorded]):
-        decisions.upsert_search_attributes(
-            _upsert_attrs({"CustomKeywordField": b'{"city":"seattle"}'})
-        )
+        pass
 
 
-async def test_replayed_upsert_value_mismatch_is_nondeterministic():
-    decisions = DecisionManager(asyncio.get_event_loop())
-    recorded = _upsert_recorded(1, {"CustomIntField": b"1"})
-
-    with pytest.raises(NonDeterminismError):
-        with decisions.track_nondeterminism(True, [recorded]):
-            decisions.upsert_search_attributes(_upsert_attrs({"CustomIntField": b"2"}))
-
-
-async def test_replayed_upsert_missing_from_workflow_is_nondeterministic():
-    decisions = DecisionManager(asyncio.get_event_loop())
-    recorded = _upsert_recorded(1, {"CustomIntField": b"1"})
-
-    with pytest.raises(NonDeterminismError):
-        with decisions.track_nondeterminism(True, [recorded]):
-            pass
-
-
-async def test_upsert_history_without_requested_machine_is_nondeterministic():
+async def test_upsert_history_without_requested_machine_is_ignored():
     decisions = DecisionManager(asyncio.get_event_loop())
 
-    with pytest.raises(NonDeterminismError):
-        decisions.handle_history_event(_upsert_recorded(1, {"CustomIntField": b"1"}))
+    decisions.handle_history_event(_upsert_recorded(1, {"CustomIntField": b"1"}))
+
+    assert decisions.collect_pending_decisions() == []
